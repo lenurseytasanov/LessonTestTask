@@ -21,75 +21,60 @@ public class BotLogicTest {
     }
 
     /**
-     * Тест на команду /test
+     * Тест на команду /test. Проверяется реакция бота на правильный и неправильный ответы.
      */
     @Test
     public void testCommandTest() {
-        // Arrange
-        String command = "/test";
-        String expected = "Вычислите степень: 10^2";
+        botLogic.processCommand(user, "/test");
+        assertEquals("Вычислите степень: 10^2", bot.getMessages().getFirst());
 
-        // Act
-        botLogic.processCommand(user, command);
-        String message = bot.getMessages().getFirst();
+        botLogic.processCommand(user, "100");
+        assertEquals("Правильный ответ!", bot.getMessages().get(1));
+        assertEquals("Сколько будет 2 + 2 * 2", bot.getMessages().getFirst());
 
-        // Assert
-        assertEquals(State.TEST, user.getState());
-        assertEquals(expected, message);
+        botLogic.processCommand(user, "0");
+        assertEquals("Вы ошиблись, верный ответ: 6", bot.getMessages().get(1));
+        assertEquals("Тест завершен", bot.getMessages().getFirst());
     }
 
     /**
-     * Тест на команду /notify
+     * Тест на команду /notify. Проверяется, что напоминание срабатывает через указанное время.
+     * Также проверяется работа при неправильном формате записи числа секунд.
      */
     @Test
-    public void notifyCommandTest() {
-        // Arrange
-        String command = "/notify";
-        String expected = "Введите текст напоминания";
+    public void notifyCommandTest() throws InterruptedException {
+        botLogic.processCommand(user, "/notify");
+        assertEquals("Введите текст напоминания", bot.getMessages().getFirst());
 
-        // Act
-        botLogic.processCommand(user, command);
-        String message = bot.getMessages().getFirst();
+        String notificationText = "notification";
+        botLogic.processCommand(user, notificationText);
+        assertEquals("Через сколько секунд напомнить?", bot.getMessages().getFirst());
 
-        // Assert
-        assertEquals(State.SET_NOTIFY_TEXT, user.getState());
-        assertEquals(expected, message);
+        botLogic.processCommand(user, "not_a_number");
+        assertEquals("Пожалуйста, введите целое число", bot.getMessages().getFirst());
+
+        botLogic.processCommand(user, "1");
+        assertEquals("Напоминание установлено", bot.getMessages().getFirst());
+
+        Thread.sleep(1010);
+        assertEquals("Сработало напоминание: '%s'".formatted(notificationText), bot.getMessages().getFirst());
     }
 
     /**
-     * Тест на команду /repeat с пустым списком не решенных вопросов
-     */
-    @Test
-    public void repeatCommandEmptyListTest() {
-        // Arrange
-        String command = "/repeat";
-        String expected = "Нет вопросов для повторения";
-
-        // Act
-        botLogic.processCommand(user, command);
-        String message = bot.getMessages().getFirst();
-
-        // Assert
-        assertEquals(expected, message);
-    }
-
-    /**
-     * Тест на команду /repeat с одним не решенным вопросом
+     * Тест на команду /repeat с одним нерешенным вопросом. Проверятся реакция при отсутсвии
+     * нерешенных вопросов.
      */
     @Test
     public void repeatCommandTest() {
-        // Arrange
-        String command = "/repeat";
-        String questionText = "question";
-        Question question = new Question(questionText, "answer");
-        user.addWrongAnswerQuestion(question);
+        botLogic.processCommand(user, "/test");
+        botLogic.processCommand(user, "-1");
+        botLogic.processCommand(user, "6");
 
-        // Act
-        botLogic.processCommand(user, command);
-        String message = bot.getMessages().getFirst();
+        botLogic.processCommand(user, "/repeat");
+        assertEquals("Вычислите степень: 10^2", bot.getMessages().getFirst());
+        botLogic.processCommand(user, "100");
 
-        // Assert
-        assertEquals(State.REPEAT, user.getState());
-        assertEquals(questionText, message);
+        botLogic.processCommand(user, "/repeat");
+        assertEquals("Нет вопросов для повторения", bot.getMessages().getFirst());
     }
 }
